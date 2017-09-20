@@ -76,7 +76,7 @@ namespace FileTransfer.Sockets
         {
             get { return _recevingFlag; }
         }
-        
+
 
         #endregion
 
@@ -277,27 +277,27 @@ namespace FileTransfer.Sockets
             socket.Send(disconnectBytes, 0, 16, SocketFlags.None);
         }
 
-        private int GetRemoteListenPort(System.Net.Sockets.Socket socket)
-        {
-            try
-            {
-                byte[] portBytes = new byte[16];
-                int byteRec = socket.Receive(portBytes, 16, SocketFlags.None);
-                string portStr = Encoding.Unicode.GetString(portBytes, 0, 16).TrimEnd('\0');
-                int port = int.Parse(portStr);
-                return port;
-            }
-            catch (SocketException se)
-            {
-                _logger.Error(string.Format("获取远端监听端口信息时发生套接字异常！SocketException ErrorCode：{0}", se.ErrorCode));
-                return -1;
-            }
-            catch (Exception e)
-            {
-                _logger.Error(string.Format("获取远端监听端口信息时发生异常！异常信息：{0}", e.Message));
-                return -1;
-            }
-        }
+        //private int GetRemoteListenPort(System.Net.Sockets.Socket socket)
+        //{
+        //    try
+        //    {
+        //        byte[] portBytes = new byte[16];
+        //        int byteRec = socket.Receive(portBytes, 16, SocketFlags.None);
+        //        string portStr = Encoding.Unicode.GetString(portBytes, 0, 16).TrimEnd('\0');
+        //        int port = int.Parse(portStr);
+        //        return port;
+        //    }
+        //    catch (SocketException se)
+        //    {
+        //        _logger.Error(string.Format("获取远端监听端口信息时发生套接字异常！SocketException ErrorCode：{0}", se.ErrorCode));
+        //        return -1;
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        _logger.Error(string.Format("获取远端监听端口信息时发生异常！异常信息：{0}", e.Message));
+        //        return -1;
+        //    }
+        //}
 
         private Socket TryConnectRemote(IPEndPoint remote)
         {
@@ -353,12 +353,14 @@ namespace FileTransfer.Sockets
             {
                 _logger.Error(string.Format("请求远端{0}:{1}监控文件夹信息时发生套接字异常！SocketException ErroCode:{2}", remote.Address, remote.Port, se.ErrorCode));
                 CloseSocket(socket);
+                MessageBox.Show(string.Format("请求远端{0}:{1}监控文件夹信息时发生套接字异常！SocketException ErroCode:{2}", remote.Address, remote.Port, se.ErrorCode), "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }
             catch (Exception e)
             {
                 _logger.Error(string.Format("请求远端{0}:{1}监控文件夹信息时发生异常！异常信息：{2}", remote.Address, remote.Port, e.Message));
                 CloseSocket(socket);
+                MessageBox.Show(string.Format("请求远端{0}:{1}监控文件夹信息时发生异常！异常信息：{2}", remote.Address, remote.Port, e.Message), "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }
         }
@@ -396,12 +398,14 @@ namespace FileTransfer.Sockets
             {
                 _logger.Error(string.Format("接收监控文件夹信息时发生套接字异常！SocketException ErroCode:{0}", se.ErrorCode));
                 CloseSocket(socket);
+                MessageBox.Show(string.Format("接收监控文件夹信息时发生套接字异常！SocketException ErroCode:{0}", se.ErrorCode), "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }
             catch (Exception e)
             {
                 _logger.Error(string.Format("接收监控文件夹信息时发生异常！异常信息：{0}", e.Message));
                 CloseSocket(socket);
+                MessageBox.Show(string.Format("接收监控文件夹信息时发生异常！异常信息：{0}", e.Message), "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }
         }
@@ -443,11 +447,13 @@ namespace FileTransfer.Sockets
             {
                 _logger.Error(string.Format("发送监控文件夹信息时发生套接字异常！SocketException ErroCode:{0}", se.ErrorCode));
                 CloseSocket(socket);
+                MessageBox.Show(string.Format("发送监控文件夹信息时发生套接字异常！SocketException ErroCode:{0}", se.ErrorCode), "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception e)
             {
                 _logger.Error(string.Format("发送监控文件夹信息时发生异常！异常信息：{0}", e.Message));
                 CloseSocket(socket);
+                MessageBox.Show(string.Format("发送监控文件夹信息时发生异常！异常信息：{0}", e.Message), "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -500,11 +506,13 @@ namespace FileTransfer.Sockets
             {
                 _logger.Error(String.Format("向远端{0}:{1}发送订阅信息时发生套接字异常！SocketException ErrorCode:{2}", remote.Address, remote.Port, se.ErrorCode));
                 CloseSocket(socket);
+                MessageBox.Show(String.Format("向远端{0}:{1}发送订阅信息时发生套接字异常！SocketException ErrorCode:{2}", remote.Address, remote.Port, se.ErrorCode), "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception e)
             {
                 _logger.Error(String.Format("向远端{0}:{1}发送订阅信息时发生异常！异常：{2}", remote.Address, remote.Port, e.Message));
                 CloseSocket(socket);
+                MessageBox.Show(String.Format("向远端{0}:{1}发送订阅信息时发生异常！异常：{2}", remote.Address, remote.Port, e.Message), "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -516,6 +524,7 @@ namespace FileTransfer.Sockets
             {
                 SendFiles(change.MonitorDirectory, change.SubscribeIPs, change.FileChanges);
             }
+            //传输完成后，恢复监控
             FileWatcherHelper.Instance.RecoverMonitor();
         }
 
@@ -659,6 +668,7 @@ namespace FileTransfer.Sockets
             {
                 _logger.Error(String.Format("向远端发送监控文件夹内的文件信息时发生套接字异常！SocketException ErrorCode:{0}", se.ErrorCode));
                 sockets.ForEach(socket => CloseSocket(socket));
+                MessageBox.Show(String.Format("向远端发送监控文件夹内的文件信息时发生套接字异常！SocketException ErrorCode:{0}", se.ErrorCode), "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 //恢复文件发送标志位
                 _sendingFilesFlag = false;
             }
@@ -666,15 +676,13 @@ namespace FileTransfer.Sockets
             {
                 _logger.Error(String.Format("向远端发送监控文件夹内的文件时发生异常！异常：{0}", e.Message));
                 sockets.ForEach(socket => CloseSocket(socket));
+                MessageBox.Show(String.Format("向远端发送监控文件夹内的文件时发生异常！异常：{0}", e.Message), "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 //恢复文件发送标志位
                 _sendingFilesFlag = false;
             }
         }
 
-        //private void ReceiveAllBytes(Socket socket, byte[] buffer, int offset, int size, SocketFlags flag)
-        //{
-
-        //}
+        
 
         private void DisconnectSocket(Socket socket)
         {
