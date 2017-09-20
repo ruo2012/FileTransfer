@@ -111,7 +111,7 @@ namespace FileTransfer.ViewModels
 
         private bool CanExecuteRequestMonitorFlodersCommand()
         {
-            return !string.IsNullOrEmpty(RemoteIP) && Regex.IsMatch(RemoteIP, @"^(((\d{1,2})|(1[0-9][0-9])|(2[0-4][0-9])|(25[0-5]))\.){3}((\d{1,2})|(1[0-9][0-9])|(2[0-4][0-9])|(25[0-5]))$") && (RemotePort >= 0 && RemotePort <= 65535);
+            return (RemotePort >= 0 && RemotePort <= 65535) && !string.IsNullOrEmpty(RemoteIP) && Regex.IsMatch(RemoteIP, @"^(((\d{1,2})|(1[0-9][0-9])|(2[0-4][0-9])|(25[0-5]))\.){3}((\d{1,2})|(1[0-9][0-9])|(2[0-4][0-9])|(25[0-5]))$");
         }
 
         private void ExecuteRequestMonitorFlodersCommand()

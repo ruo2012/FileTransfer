@@ -126,10 +126,23 @@ namespace FileTransfer.FileWatcher
             }
         }
 
-        public void TryDeleteSubdirectories(string monitorDirectory)
+        //删除增量文件对应的子文件夹
+        public void TryDeleteSubdirectories(string monitorDirectory, List<string> incrementFiles)
         {
-            if (!_deleteSubdirectoryDic.Keys.Contains(monitorDirectory) || _deleteSubdirectoryDic[monitorDirectory] == false) return;
-            DeleteDirectories(GetAllSubDirectories(monitorDirectory));
+            List<string> subdirectories = new List<string>();
+            List<string> dirs = incrementFiles.Select(f => (new FileInfo(f)).DirectoryName).ToList();
+            foreach (var d in dirs)
+            {
+                var temp = d.Replace(monitorDirectory, "");
+                if (string.IsNullOrEmpty(temp)) continue;
+                string[] strs = temp.Split('\\');
+                if (strs.Length < 2) continue;
+                temp = Path.Combine(monitorDirectory, strs[1]);
+                subdirectories.Add(temp);
+            }
+            if (subdirectories.Count <= 0) return;
+            subdirectories = subdirectories.Distinct().ToList();
+            DeleteDirectories(subdirectories);
         }
 
         public void CheckAndCreateDirectory(string fileName)

@@ -2,6 +2,7 @@
 using FileTransfer.FileWatcher;
 using FileTransfer.Models;
 using FileTransfer.Sockets;
+using FileTransfer.Utils;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.Command;
 using GalaSoft.MvvmLight.Messaging;
@@ -145,9 +146,11 @@ namespace FileTransfer.ViewModels
             QueryLogsCommand = new RelayCommand(ExecuteQueryLogsCommand);
             LoadedCommand = new RelayCommand(ExecuteLoadedCommand);
             ClosedCommand = new RelayCommand(ExecuteClosedCommand);
-            AddSubscibeCommand = new RelayCommand(ExecuteAddSubscibeCommand);
+            AddSubscibeCommand = new RelayCommand(ExecuteAddSubscibeCommand, CanExecuteAddSubscibeCommand);
             SetListenPortCommand = new RelayCommand<bool>(ExecuteSetListenPortCommand);
         }
+
+
 
 
         private void ExecuteControlMonitorCommand(bool control)
@@ -257,7 +260,7 @@ namespace FileTransfer.ViewModels
                 //删除监控配置
                 MonitorCollection.Remove(model1);
                 //删除监控配置后通知相关订阅方，删除相关配置
-
+                SynchronousSocketManager.Instance.SendDeleteMonitorInfo(UtilHelper.Instance.GetIPEndPoint(model1.SubscribeIP), model1.MonitorDirectory);
             }
             else
             {
@@ -272,7 +275,7 @@ namespace FileTransfer.ViewModels
                 //删除接收配置
                 SubscribeCollection.Remove(model2);
                 //删除接收配置后，综合接收配置决定是否通知监控端删除订阅信息
-
+                SynchronousSocketManager.Instance.SendUnregisterSubscribeInfo(UtilHelper.Instance.GetIPEndPoint(string.Format("{0}:{1}", model2.MonitorIP, model2.MonitorListenPort)), model2.MonitorDirectory);
             }
         }
 
@@ -353,6 +356,11 @@ namespace FileTransfer.ViewModels
             _logger.Info("主窗体卸载完毕!");
         }
 
+        private bool CanExecuteAddSubscibeCommand()
+        {
+            return !SynchronousSocketManager.Instance.ReceivingFlag && !SynchronousSocketManager.Instance.SendingFilesFlag;
+        }
+
         private void ExecuteAddSubscibeCommand()
         {
             Messenger.Default.Send<string>("ShowSubscribeView");
@@ -391,8 +399,24 @@ namespace FileTransfer.ViewModels
                 return;
             else
             {
-                MonitorCollection.Add(new MonitorModel() { MonitorDirectory = monitorDirectory, SubscribeIP = subscribeIP });
+                App.Current.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    MonitorCollection.Add(new MonitorModel() { MonitorDirectory = monitorDirectory, SubscribeIP = subscribeIP });
+                }));
             }
+        }
+
+        public void RemoveAcceptSettings(string monitorIP, string monitorDirectory)
+        {
+            var accepts = SubscribeCollection.Where(s => s.MonitorIP == monitorIP && s.MonitorDirectory == monitorDirectory).ToList();
+            App.Current.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                foreach (var accept in accepts)
+                {
+                    SubscribeCollection.Remove(accept);
+                }
+            }));
+
         }
         #endregion
 

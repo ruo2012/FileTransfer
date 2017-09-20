@@ -54,7 +54,7 @@ namespace FileTransfer.FileWatcher
 
         private void InitialMonitorChanges()
         {
-            var monitors = SimpleIoc.Default.GetInstance<MainViewModel>().MonitorCollection.Where(m => !string.IsNullOrEmpty(m.SubscribeIP)).ToList();
+            var monitors = SimpleIoc.Default.GetInstance<MainViewModel>().MonitorCollection.ToList();
             List<string> monitorDirectories = monitors.Select(m => m.MonitorDirectory).Distinct().ToList();
             _monitorDirectoryChanges = new Dictionary<string, List<string>>();
             foreach (var monitor in monitorDirectories)
@@ -84,28 +84,59 @@ namespace FileTransfer.FileWatcher
         //定时处理任务
         private void _timer_Elapsed(object sender, ElapsedEventArgs e)
         {
+            PauseMonitor();
             List<string> keyList = _monitorDirectoryChanges.Keys.ToList();
             List<MonitorChanges> changes = new List<MonitorChanges>();
             foreach (string monitorDirectory in keyList)
             {
                 if (!IOHelper.Instance.HasMonitorDirectory(monitorDirectory))
                     continue;
+                //获取当前监控文件夹是否有订阅者
+                List<string> subscribeIPs = SimpleIoc.Default.GetInstance<MainViewModel>().MonitorCollection.Where(m => !string.IsNullOrEmpty(m.SubscribeIP)).Where(m => m.MonitorDirectory == monitorDirectory).Select(m => m.SubscribeIP).ToList();
+                //如果没有订阅者就继续循环（不用检测文件夹内的文件变化）
+                if (subscribeIPs == null || subscribeIPs.Count <= 0) continue;
+                //获取现有文件信息
                 List<string> nowFiles = IOHelper.Instance.GetAllFiles(monitorDirectory);
+                //获取原有文件信息
+                List<string> oldFiles = _monitorDirectoryChanges[monitorDirectory];
                 //相比之前文件信息集的增量
-                List<string> incrementFiles = nowFiles.Except(_monitorDirectoryChanges[monitorDirectory]).ToList();
+                List<string> incrementFiles = nowFiles.Except(oldFiles).ToList();
+                //记录被其他线程占用的文件信息
+                List<string> usedIncrementFiles = new List<string>();
+                foreach (var increment in incrementFiles)
+                {
+                    if (TryAccessFile(increment)) continue;
+                    usedIncrementFiles.Add(increment);
+                }
+                //更新：nowFiles记录当前未被占用的文件集，incrementFiles记录当前未被占用的增量集
+                nowFiles = nowFiles.Except(usedIncrementFiles).ToList();
+                incrementFiles = incrementFiles.Except(usedIncrementFiles).ToList();
                 //记录现在监控文件夹内的信息
                 _monitorDirectoryChanges[monitorDirectory] = nowFiles;
                 //如果没有增量，则继续遍历
                 if (incrementFiles == null || incrementFiles.Count <= 0)
                     continue;
                 _logger.Info(string.Format("监控文件夹{0}内新增{1}个文件", monitorDirectory, incrementFiles.Count));
-                //通知注册事件的类处理增量信息
-                List<string> subscribeIPs = SimpleIoc.Default.GetInstance<MainViewModel>().MonitorCollection.Where(m => !string.IsNullOrEmpty(m.SubscribeIP)).Where(m => m.MonitorDirectory == monitorDirectory).Select(m => m.SubscribeIP).ToList();
                 changes.Add(new MonitorChanges() { MonitorDirectory = monitorDirectory, SubscribeIPs = subscribeIPs, FileChanges = incrementFiles });
             }
+            RecoverMonitor();
             if (changes == null || changes.Count <= 0) return;
             if (NotifyMonitorChanges != null)
                 NotifyMonitorChanges(changes);
+        }
+
+        private bool TryAccessFile(string file)
+        {
+            try
+            {
+                using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read))
+                { }
+                return true;
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
         }
 
         //public void AddNewMonitor(string monitorDirectory)

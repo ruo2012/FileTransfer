@@ -22,8 +22,8 @@ namespace FileTransfer.Sockets
         private const int CONNECTED_MAXCOUNT = 5;
         //64k
         private const int BUFFER_SIZE = 65536;
-        private const int SOCKET_SEND_TIMEOUT = 5000;
-        private const int SOCKET_RECEIVE_TIMEOUT = 5000;
+        private const int SOCKET_SEND_TIMEOUT = 0;
+        private const int SOCKET_RECEIVE_TIMEOUT = 0;
         #endregion
 
         #region 变量
@@ -143,6 +143,12 @@ namespace FileTransfer.Sockets
                     case "$BTF#":
                         ReceiveFiles(socket);
                         break;
+                    case "$DMF#":
+                        ReceiveDeleteMonitor(socket);
+                        break;
+                    case "$DSF#":
+                        ReceiveUnregeistSubscirbe(socket);
+                        break;
                     default:
                         _logger.Error(string.Format("套接字所接受字节数据无法转换为有效数据！转换结果为：{0}", headerMsg));
                         break;
@@ -168,7 +174,48 @@ namespace FileTransfer.Sockets
             }
         }
 
-        private void ReceiveFiles(System.Net.Sockets.Socket socket)
+        private void ReceiveUnregeistSubscirbe(Socket socket)
+        {
+            //获取要注销的IP地址和监控文件夹信息
+            byte[] receiveBytes = new byte[64];
+            int byteRec = socket.Receive(receiveBytes, 0, 64, SocketFlags.None);
+            string subscribeIp = Encoding.Unicode.GetString(receiveBytes.Take(byteRec).ToArray(), 0, byteRec).TrimEnd('\0');
+            receiveBytes = new byte[4];
+            byteRec = socket.Receive(receiveBytes, 0, 4, SocketFlags.None);
+            int directoryLength = BitConverter.ToInt32(receiveBytes.Take(byteRec).ToArray(), 0);
+            receiveBytes = new byte[directoryLength];
+            byteRec = socket.Receive(receiveBytes, 0, directoryLength, SocketFlags.None);
+            string monitorDirectory = Encoding.Unicode.GetString(receiveBytes.Take(byteRec).ToArray(), 0, byteRec).TrimEnd('\0');
+            //注销本地订阅信息
+            SimpleIoc.Default.GetInstance<MainViewModel>().MonitorCollection.Where(m => m.MonitorDirectory == monitorDirectory && m.SubscribeIP == subscribeIp).ToList().ForEach(m => m.SubscribeIP = "");
+            //发送断开信息
+            byte[] disconnectBytes = new byte[16];
+            Encoding.Unicode.GetBytes("$DSK#").CopyTo(disconnectBytes, 0);
+            socket.Send(disconnectBytes, 0, 16, SocketFlags.None);
+        }
+
+        private void ReceiveDeleteMonitor(Socket socket)
+        {
+            //获取远端发送方的IP信息
+            byte[] receiveBytes = new byte[32];
+            int byteRec = socket.Receive(receiveBytes, 0, 32, SocketFlags.None);
+            string monitorIp = Encoding.Unicode.GetString(receiveBytes.Take(byteRec).ToArray(), 0, byteRec).TrimEnd('\0');
+            //获取监控文件夹信息
+            receiveBytes = new byte[4];
+            byteRec = socket.Receive(receiveBytes, 0, 4, SocketFlags.None);
+            int floderLength = BitConverter.ToInt32(receiveBytes.Take(byteRec).ToArray(), 0);
+            receiveBytes = new byte[floderLength];
+            byteRec = socket.Receive(receiveBytes, 0, floderLength, SocketFlags.None);
+            string monitorDirectory = Encoding.Unicode.GetString(receiveBytes.Take(byteRec).ToArray(), 0, byteRec).TrimEnd('\0');
+            //删除本地对应监控的接收配置
+            SimpleIoc.Default.GetInstance<MainViewModel>().RemoveAcceptSettings(monitorIp, monitorDirectory);
+            //发送断开信息
+            byte[] disconnectBytes = new byte[16];
+            Encoding.Unicode.GetBytes("$DSK#").CopyTo(disconnectBytes, 0);
+            socket.Send(disconnectBytes, 0, 16, SocketFlags.None);
+        }
+
+        private void ReceiveFiles(Socket socket)
         {
             //获取远端发送方的IP信息
             byte[] receiveBytes = new byte[32];
@@ -253,7 +300,7 @@ namespace FileTransfer.Sockets
             socket.Send(disconnectBytes, 0, 16, SocketFlags.None);
         }
 
-        private void ReceiveSubscribInfo(System.Net.Sockets.Socket socket)
+        private void ReceiveSubscribInfo(Socket socket)
         {
             //获取订阅者IP
             byte[] ipBytes = new byte[64];
@@ -645,7 +692,7 @@ namespace FileTransfer.Sockets
                 //所有文件发送完成后，根据情况选择是否删除子目录
                 Task.Factory.StartNew(() =>
                 {
-                    IOHelper.Instance.TryDeleteSubdirectories(monitorDirectory);
+                    IOHelper.Instance.TryDeleteSubdirectories(monitorDirectory, monitorIncrement);
                 });
                 //发出所有文件发送完毕的事件
                 if (CompleteSendFile != null)
@@ -682,7 +729,109 @@ namespace FileTransfer.Sockets
             }
         }
 
-        
+        public void SendDeleteMonitorInfo(IPEndPoint remote, string monitorDirectory)
+        {
+            Socket socket = null;
+            try
+            {
+                //尝试与远端连接
+                socket = TryConnectRemote(remote);
+                if (socket == null)
+                {
+                    _logger.Error(string.Format("与远端{0}:{1}尝试{2}次（最大连接次数）连接后失败！", remote.Address, remote.Port, CONNECTED_MAXCOUNT));
+                    MessageBox.Show("无法与远端进行连接！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                //设置Timeout
+                socket.SendTimeout = SOCKET_SEND_TIMEOUT;
+                socket.ReceiveTimeout = SOCKET_RECEIVE_TIMEOUT;
+                //设置消息头(占据16位)
+                byte[] sendBytes = new byte[16];
+                byte[] msgBytes = Encoding.Unicode.GetBytes(@"$DMF#");
+                msgBytes.CopyTo(sendBytes, 0);
+                //发送消息头
+                socket.Send(sendBytes, 0, 16, SocketFlags.None);
+                //发送本地IP和监控文件夹
+                byte[] directoryBytes = Encoding.Unicode.GetBytes(monitorDirectory);
+                //前32位为本地IPv4,33-36为文件夹byte数组的长度，后面为文件夹byte数组
+                sendBytes = new byte[36 + directoryBytes.Length];
+                Encoding.Unicode.GetBytes(LocalIPv4).CopyTo(sendBytes, 0);
+                BitConverter.GetBytes(directoryBytes.Length).CopyTo(sendBytes, 32);
+                directoryBytes.CopyTo(sendBytes, 36);
+                socket.Send(sendBytes, 0);
+                //接收返回信息
+                byte[] receiveBytes = new byte[16];
+                int byteRec = socket.Receive(receiveBytes, 16, SocketFlags.None);
+                string msg = Encoding.Unicode.GetString(receiveBytes, 0, 16).TrimEnd('\0');
+                if (msg != "$DSK#")
+                    _logger.Info(string.Format("发送删除监控文件夹信息后返回的结果解析异常（值：{0}，与$DSK#不符）！", msg));
+                //关闭连接
+                DisconnectSocket(socket);
+            }
+            catch (SocketException se)
+            {
+                _logger.Error(String.Format("向远端发送删除监控文件夹信息时发生套接字异常！SocketException ErrorCode:{0}", se.ErrorCode));
+                CloseSocket(socket);
+                MessageBox.Show(String.Format("向远端发送删除监控文件夹信息时发生套接字异常！SocketException ErrorCode:{0}", se.ErrorCode), "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (Exception e)
+            {
+                _logger.Error(String.Format("向远端发送删除监控文件夹信息时发生异常！SocketException ErrorCode:{0}", e.Message));
+                CloseSocket(socket);
+                MessageBox.Show(String.Format("向远端发送删除监控文件夹信息时发生异常！SocketException ErrorCode:{0}", e.Message), "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        public void SendUnregisterSubscribeInfo(IPEndPoint remote, string monitorDirectory)
+        {
+            Socket socket = null;
+            try
+            {
+                //尝试与远端连接
+                socket = TryConnectRemote(remote);
+                if (socket == null)
+                {
+                    _logger.Error(string.Format("与远端{0}:{1}尝试{2}次（最大连接次数）连接后失败！", remote.Address, remote.Port, CONNECTED_MAXCOUNT));
+                    MessageBox.Show("无法与远端进行连接！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                //设置Timeout
+                socket.SendTimeout = SOCKET_SEND_TIMEOUT;
+                socket.ReceiveTimeout = SOCKET_RECEIVE_TIMEOUT;
+                //设置消息头(占据16位)
+                byte[] sendBytes = new byte[16];
+                byte[] msgBytes = Encoding.Unicode.GetBytes(@"$DSF#");
+                msgBytes.CopyTo(sendBytes, 0);
+                //发送消息头
+                socket.Send(sendBytes, 0, 16, SocketFlags.None);
+                //发送本地IP(地址+端口)和监控文件夹
+                byte[] directoryBytes = Encoding.Unicode.GetBytes(monitorDirectory);
+                string ipStr = string.Format("{0}:{1}", LocalIPv4, LocalListenPort);
+                sendBytes = new byte[68 + directoryBytes.Length];
+                Encoding.Unicode.GetBytes(ipStr).CopyTo(sendBytes, 0);
+                BitConverter.GetBytes(directoryBytes.Length).CopyTo(sendBytes, 64);
+                directoryBytes.CopyTo(sendBytes, 68);
+                socket.Send(sendBytes, 0);
+                //接收返回信息
+                byte[] receiveBytes = new byte[16];
+                int byteRec = socket.Receive(receiveBytes, 16, SocketFlags.None);
+                string msg = Encoding.Unicode.GetString(receiveBytes, 0, 16).TrimEnd('\0');
+                if (msg != "$DSK#")
+                    _logger.Info(string.Format("发送注销订阅信息后返回的结果解析异常（值：{0}，与$DSK#不符）！", msg));
+                //关闭连接
+                DisconnectSocket(socket);
+            }
+            catch (SocketException se)
+            {
+                _logger.Error(String.Format("向远端发送注销订阅信息时发生套接字异常！SocketException ErrorCode:{0}", se.ErrorCode));
+                CloseSocket(socket);
+                MessageBox.Show(String.Format("向远端发送注销订阅信息时发生套接字异常！SocketException ErrorCode:{0}", se.ErrorCode), "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (Exception e)
+            {
+                _logger.Error(String.Format("向远端发送注销订阅信息时发生异常！SocketException ErrorCode:{0}", e.Message));
+                CloseSocket(socket);
+                MessageBox.Show(String.Format("向远端发送注销订阅信息时发生异常！SocketException ErrorCode:{0}", e.Message), "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
 
         private void DisconnectSocket(Socket socket)
         {
