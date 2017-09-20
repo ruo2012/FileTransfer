@@ -87,6 +87,7 @@
     <Compile Include="Converters\MonitorFlagConverter.cs" />
     <Compile Include="Converters\SetPortConverter.cs" />
     <Compile Include="FileWatcher\IOHelper.cs" />
+    <Compile Include="FileWatcher\MonitorChanges.cs" />
     <Compile Include="Models\MonitorModel.cs" />
     <Compile Include="Models\SubscribeModel.cs" />
     <Compile Include="Sockets\SynchronousSocket.cs" />

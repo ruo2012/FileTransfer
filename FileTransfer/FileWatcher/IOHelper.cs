@@ -12,6 +12,8 @@ namespace FileTransfer.FileWatcher
     {
         #region 变量
         private static ILog _logger = LogManager.GetLogger(typeof(IOHelper));
+        private Dictionary<string, bool> _deleteFilesDic;
+        private Dictionary<string, bool> _deleteSubdirectoryDic;
         #endregion
 
         #region 单例
@@ -22,6 +24,14 @@ namespace FileTransfer.FileWatcher
             get { return _instance ?? (_instance = new IOHelper()); }
         }
 
+        #endregion
+
+        #region 构造函数
+        public IOHelper()
+        {
+            _deleteFilesDic = new Dictionary<string, bool>();
+            _deleteSubdirectoryDic = new Dictionary<string, bool>();
+        }
         #endregion
 
         #region 方法
@@ -64,7 +74,7 @@ namespace FileTransfer.FileWatcher
             }
         }
 
-        public void DeleteFile(string file)
+        private void DeleteFile(string file)
         {
             try
             {
@@ -74,6 +84,12 @@ namespace FileTransfer.FileWatcher
             {
                 _logger.Error(string.Format(string.Format("删除文件{0}时发生错误！错误信息：{1}", file, e.Message)));
             }
+        }
+
+        public void TryDeleteFile(string monitorDirectory, string file)
+        {
+            if (!_deleteFilesDic.Keys.Contains(monitorDirectory) || _deleteFilesDic[monitorDirectory] == false) return;
+            DeleteFile(file);
         }
 
         public List<string> GetAllSubDirectories(string path)
@@ -110,11 +126,29 @@ namespace FileTransfer.FileWatcher
             }
         }
 
+        public void TryDeleteSubdirectories(string monitorDirectory)
+        {
+            if (!_deleteSubdirectoryDic.Keys.Contains(monitorDirectory) || _deleteSubdirectoryDic[monitorDirectory] == false) return;
+            DeleteDirectories(GetAllSubDirectories(monitorDirectory));
+        }
+
         public void CheckAndCreateDirectory(string fileName)
         {
             FileInfo fileInfo = new FileInfo(fileName);
             if (!Directory.Exists(fileInfo.DirectoryName))
                 Directory.CreateDirectory(fileInfo.DirectoryName);
+        }
+
+        public void SetDeleteSetting(string monitor, bool deleteFile, bool deleteSubdirectory)
+        {
+            if (_deleteFilesDic.Keys.Contains(monitor))
+                _deleteFilesDic[monitor] = deleteFile;
+            else
+                _deleteFilesDic.Add(monitor, deleteFile);
+            if (_deleteSubdirectoryDic.Keys.Contains(monitor))
+                _deleteSubdirectoryDic[monitor] = deleteSubdirectory;
+            else
+                _deleteSubdirectoryDic.Add(monitor, deleteSubdirectory);
         }
 
         #endregion

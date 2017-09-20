@@ -247,12 +247,32 @@ namespace FileTransfer.ViewModels
         {
             var model1 = deleteItem as MonitorModel;
             if (model1 != null)
+            {
+                //检查发送标志位（若为true则不允许删除配置）
+                if (SynchronousSocketManager.Instance.SendingFilesFlag)
+                {
+                    MessageBox.Show("当前正在发送文件，不允许删除任何监控配置项！", "警告", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                //删除监控配置
                 MonitorCollection.Remove(model1);
+                //删除监控配置后通知相关订阅方，删除相关配置
+
+            }
             else
             {
                 var model2 = deleteItem as SubscribeModel;
                 if (model2 == null) return;
+                //检查接收标志位（若为true则不允许删除配置）
+                if (SynchronousSocketManager.Instance.ReceivingFlag)
+                {
+                    MessageBox.Show("当前正在接收，不允许删除任何接收配置项！", "警告", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                //删除接收配置
                 SubscribeCollection.Remove(model2);
+                //删除接收配置后，综合接收配置决定是否通知监控端删除订阅信息
+
             }
         }
 
@@ -275,7 +295,7 @@ namespace FileTransfer.ViewModels
                 ListenPort = ConfigHelper.Instance.ListenPort;
                 ScanPeriod = ConfigHelper.Instance.ScanPeriod;
                 //订阅事件
-                FileWatcherHelper.Instance.NotifyMonitorIncrement = SynchronousSocketManager.Instance.SendMonitorChanges;
+                FileWatcherHelper.Instance.NotifyMonitorChanges = SynchronousSocketManager.Instance.SendMonitorChanges;
                 SynchronousSocketManager.Instance.SendFileProgress += ShowSendProgress;
                 SynchronousSocketManager.Instance.AcceptFileProgress += ShowAcceptProgress;
                 SynchronousSocketManager.Instance.CompleteSendFile += ShowCompleteSendFile;
@@ -347,6 +367,12 @@ namespace FileTransfer.ViewModels
             }
             else
             {
+                //判断是否有接收（有的话则不允许关闭监听）
+                if (SynchronousSocketManager.Instance.ReceivingFlag)
+                {
+                    MessageBox.Show("当前监听端口正在接收信息！暂不允许关闭！", "警告", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
                 SynchronousSocketManager.Instance.StopListening();
                 CanSetListenPort = true;
             }
@@ -366,7 +392,6 @@ namespace FileTransfer.ViewModels
             else
             {
                 MonitorCollection.Add(new MonitorModel() { MonitorDirectory = monitorDirectory, SubscribeIP = subscribeIP });
-                FileWatcherHelper.Instance.AddNewMonitor(monitorDirectory);
             }
         }
         #endregion

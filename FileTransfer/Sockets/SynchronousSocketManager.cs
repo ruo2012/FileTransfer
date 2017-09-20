@@ -62,6 +62,22 @@ namespace FileTransfer.Sockets
         {
             get { return _localListenPort; }
         }
+
+        private bool _sendingFilesFlag;
+
+        public bool SendingFilesFlag
+        {
+            get { return _sendingFilesFlag; }
+        }
+
+        private bool _recevingFlag;
+
+        public bool ReceivingFlag
+        {
+            get { return _recevingFlag; }
+        }
+        
+
         #endregion
 
         #region 构造函数
@@ -106,6 +122,8 @@ namespace FileTransfer.Sockets
         {
             try
             {
+                //设置接收标志位
+                _recevingFlag = true;
                 //配置Socket的Timeout
                 socket.ReceiveTimeout = SOCKET_RECEIVE_TIMEOUT;
                 byte[] headerBytes = new byte[16];
@@ -129,18 +147,24 @@ namespace FileTransfer.Sockets
                         _logger.Error(string.Format("套接字所接受字节数据无法转换为有效数据！转换结果为：{0}", headerMsg));
                         break;
                 }
+                //回复接收标志位
+                _recevingFlag = false;
             }
             catch (SocketException se)
             {
                 _logger.Error(string.Format("本地接收远端套接字的发送数据时，发生套接字异常！SocketException ErrorCode:{0}", se.ErrorCode));
                 CloseSocket(socket);
                 MessageBox.Show("本地接收远端套接字的发送数据时，发生套接字异常！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //回复接收标志位
+                _recevingFlag = false;
             }
             catch (Exception e)
             {
                 _logger.Error(string.Format("本地接收远端套接字的发送数据时，发生异常！异常为：{0}", e.Message));
                 CloseSocket(socket);
                 MessageBox.Show("本地接收远端套接字的发送数据时，发生异常！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //回复接收标志位
+                _recevingFlag = false;
             }
         }
 
@@ -484,23 +508,30 @@ namespace FileTransfer.Sockets
             }
         }
 
-        public void SendMonitorChanges(string monitorDirectory, List<string> monitorIncrement)
+        public void SendMonitorChanges(List<MonitorChanges> increments)
         {
-            SendFiles(monitorDirectory, monitorIncrement);
-            //Task.Factory.StartNew(() => { SendFiles(monitorDirectory, monitorIncrement); });
+            //传输监控变化时，暂时关闭监控
+            FileWatcherHelper.Instance.PauseMonitor();
+            foreach (var change in increments)
+            {
+                SendFiles(change.MonitorDirectory, change.SubscribeIPs, change.FileChanges);
+            }
+            FileWatcherHelper.Instance.RecoverMonitor();
         }
 
-        private void SendFiles(string monitorDirectory, List<string> monitorIncrement)
+        private void SendFiles(string monitorDirectory, List<string> subscribeIPs, List<string> monitorIncrement)
         {
             List<Socket> sockets = new List<Socket>();
             try
             {
-                List<string> subscribeIPs = SimpleIoc.Default.GetInstance<MainViewModel>().MonitorCollection.Where(m => m.MonitorDirectory == monitorDirectory).Select(m => m.SubscribeIP).ToList();
-                if (subscribeIPs == null || subscribeIPs.Count <= 0 || subscribeIPs.Any(s => string.IsNullOrEmpty(s)))
-                {
-                    _logger.Info(string.Format("监控设置中可能没有{0}的监控文件夹或者没有远端机器订阅该监控文件夹！", monitorDirectory));
-                    return;
-                }
+                //设置文件发送标志位
+                _sendingFilesFlag = true;
+                //List<string> subscribeIPs = SimpleIoc.Default.GetInstance<MainViewModel>().MonitorCollection.Where(m => m.MonitorDirectory == monitorDirectory).Select(m => m.SubscribeIP).ToList();
+                //if (subscribeIPs == null || subscribeIPs.Count <= 0 || subscribeIPs.Any(s => string.IsNullOrEmpty(s)))
+                //{
+                //    _logger.Info(string.Format("监控设置中可能没有{0}的监控文件夹或者没有远端机器订阅该监控文件夹！", monitorDirectory));
+                //    return;
+                //}
                 List<IPEndPoint> endPoints = subscribeIPs.Select(s => UtilHelper.Instance.GetIPEndPoint(s)).ToList();
                 //先建立连接
                 endPoints.ForEach(ep =>
@@ -598,16 +629,14 @@ namespace FileTransfer.Sockets
                     //发送完单个文件后，根据情况选择是否删除
                     Task.Factory.StartNew(() =>
                     {
-                        if (SimpleIoc.Default.GetInstance<MainViewModel>().MonitorCollection.Where(m => m.MonitorDirectory == monitorDirectory).Any(m => m.DeleteFiles == true))
-                            IOHelper.Instance.DeleteFile(file);
+                        IOHelper.Instance.TryDeleteFile(monitorDirectory, file);
                     });
                     Thread.Sleep(50);
                 });
                 //所有文件发送完成后，根据情况选择是否删除子目录
                 Task.Factory.StartNew(() =>
                 {
-                    if (SimpleIoc.Default.GetInstance<MainViewModel>().MonitorCollection.Where(m => m.MonitorDirectory == monitorDirectory).Any(m => m.DeleteSubdirectory == true))
-                        IOHelper.Instance.DeleteDirectories(IOHelper.Instance.GetAllSubDirectories(monitorDirectory));
+                    IOHelper.Instance.TryDeleteSubdirectories(monitorDirectory);
                 });
                 //发出所有文件发送完毕的事件
                 if (CompleteSendFile != null)
@@ -623,23 +652,29 @@ namespace FileTransfer.Sockets
                         _logger.Info(string.Format("发送文件后返回的结果解析异常（值：{0}，与$DSK#不符）！", msg));
                     DisconnectSocket(socket);
                 });
+                //恢复文件发送标志位
+                _sendingFilesFlag = false;
             }
             catch (SocketException se)
             {
                 _logger.Error(String.Format("向远端发送监控文件夹内的文件信息时发生套接字异常！SocketException ErrorCode:{0}", se.ErrorCode));
                 sockets.ForEach(socket => CloseSocket(socket));
+                //恢复文件发送标志位
+                _sendingFilesFlag = false;
             }
             catch (Exception e)
             {
                 _logger.Error(String.Format("向远端发送监控文件夹内的文件时发生异常！异常：{0}", e.Message));
                 sockets.ForEach(socket => CloseSocket(socket));
+                //恢复文件发送标志位
+                _sendingFilesFlag = false;
             }
         }
 
-        private void ReceiveAllBytes(Socket socket, byte[] buffer, int offset, int size, SocketFlags flag)
-        {
+        //private void ReceiveAllBytes(Socket socket, byte[] buffer, int offset, int size, SocketFlags flag)
+        //{
 
-        }
+        //}
 
         private void DisconnectSocket(Socket socket)
         {

@@ -1,4 +1,5 @@
-﻿using FileTransfer.ViewModels;
+﻿using FileTransfer.Models;
+using FileTransfer.ViewModels;
 using GalaSoft.MvvmLight.Ioc;
 using log4net;
 using System;
@@ -11,7 +12,7 @@ using System.Timers;
 
 namespace FileTransfer.FileWatcher
 {
-    class FileWatcherHelper
+    public class FileWatcherHelper
     {
         #region 变量
         private static ILog _logger = LogManager.GetLogger(typeof(FileWatcherHelper));
@@ -19,7 +20,6 @@ namespace FileTransfer.FileWatcher
         private Dictionary<string, List<string>> _monitorDirectoryChanges;
         //定时器，用于定时监控
         private Timer _timer;
-
         #endregion
 
         #region 属性
@@ -35,7 +35,8 @@ namespace FileTransfer.FileWatcher
         #endregion
 
         #region 事件
-        public Action<string, List<string>> NotifyMonitorIncrement;
+        public delegate void NotifyMonitorChangesEventHandle(List<MonitorChanges> increments);
+        public NotifyMonitorChangesEventHandle NotifyMonitorChanges;
         #endregion
 
         #region 方法
@@ -53,14 +54,20 @@ namespace FileTransfer.FileWatcher
 
         private void InitialMonitorChanges()
         {
+            var monitors = SimpleIoc.Default.GetInstance<MainViewModel>().MonitorCollection.Where(m => !string.IsNullOrEmpty(m.SubscribeIP)).ToList();
+            List<string> monitorDirectories = monitors.Select(m => m.MonitorDirectory).Distinct().ToList();
             _monitorDirectoryChanges = new Dictionary<string, List<string>>();
-            List<string> monitorDirectories = SimpleIoc.Default.GetInstance<MainViewModel>().MonitorCollection.Where(m => !string.IsNullOrEmpty(m.SubscribeIP)).Select(m => m.MonitorDirectory).Distinct().ToList();
-            foreach (var monitorDirectory in monitorDirectories)
+            foreach (var monitor in monitorDirectories)
             {
-                List<string> files = IOHelper.Instance.GetAllFiles(monitorDirectory);
+                //IOHelper中配置各监控文件夹删除文件和删除子文件夹的配置
+                bool deleteFile = monitors.Where(m => m.MonitorDirectory == monitor).Any(m => m.DeleteFiles == true);
+                bool deleteSubdirectory = monitors.Where(m => m.MonitorDirectory == monitor).Any(m => m.DeleteSubdirectory == true);
+                IOHelper.Instance.SetDeleteSetting(monitor, deleteFile, deleteSubdirectory);
+                //获取监控文件夹内的初始文件状态
+                List<string> files = IOHelper.Instance.GetAllFiles(monitor);
                 if (files == null || files.Count <= 0)
                     files = new List<string>();
-                _monitorDirectoryChanges.Add(monitorDirectory, files);
+                _monitorDirectoryChanges.Add(monitor, files);
             }
         }
 
@@ -78,6 +85,7 @@ namespace FileTransfer.FileWatcher
         private void _timer_Elapsed(object sender, ElapsedEventArgs e)
         {
             List<string> keyList = _monitorDirectoryChanges.Keys.ToList();
+            List<MonitorChanges> changes = new List<MonitorChanges>();
             foreach (string monitorDirectory in keyList)
             {
                 if (!IOHelper.Instance.HasMonitorDirectory(monitorDirectory))
@@ -92,20 +100,35 @@ namespace FileTransfer.FileWatcher
                     continue;
                 _logger.Info(string.Format("监控文件夹{0}内新增{1}个文件", monitorDirectory, incrementFiles.Count));
                 //通知注册事件的类处理增量信息
-                if (NotifyMonitorIncrement != null)
-                    NotifyMonitorIncrement(monitorDirectory, incrementFiles);
+                List<string> subscribeIPs = SimpleIoc.Default.GetInstance<MainViewModel>().MonitorCollection.Where(m => !string.IsNullOrEmpty(m.SubscribeIP)).Where(m => m.MonitorDirectory == monitorDirectory).Select(m => m.SubscribeIP).ToList();
+                changes.Add(new MonitorChanges() { MonitorDirectory = monitorDirectory, SubscribeIPs = subscribeIPs, FileChanges = incrementFiles });
             }
+            if (changes == null || changes.Count <= 0) return;
+            if (NotifyMonitorChanges != null)
+                NotifyMonitorChanges(changes);
         }
 
-        public void AddNewMonitor(string monitorDirectory)
+        //public void AddNewMonitor(string monitorDirectory)
+        //{
+        //    _timer.Stop();
+        //    if (!_monitorDirectoryChanges.Keys.Contains(monitorDirectory))
+        //    {
+        //        List<string> files = IOHelper.Instance.GetAllFiles(monitorDirectory);
+        //        _monitorDirectoryChanges.Add(monitorDirectory, files);
+        //        _logger.Info(string.Format("新增监控文件夹{0}(已被订阅)", monitorDirectory));
+        //    }
+        //    _timer.Start();
+        //}
+
+        public void PauseMonitor()
         {
+            if (_timer == null) return;
             _timer.Stop();
-            if (!_monitorDirectoryChanges.Keys.Contains(monitorDirectory))
-            {
-                List<string> files = IOHelper.Instance.GetAllFiles(monitorDirectory);
-                _monitorDirectoryChanges.Add(monitorDirectory, files);
-                _logger.Info(string.Format("新增监控文件夹{0}(已被订阅)", monitorDirectory));
-            }
+        }
+
+        public void RecoverMonitor()
+        {
+            if (_timer == null) return;
             _timer.Start();
         }
 
