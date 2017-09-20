@@ -45,10 +45,10 @@
                             <RowDefinition Height="Auto"></RowDefinition>
                         </Grid.RowDefinitions>
                         <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5,3,5,3">
-                            <Button Content="设置监控" Width="100" Height="25" Margin="3" Command="{Binding Path=MainViewModel.AddMonitorCommand, Source={StaticResource Locator}}"></Button>
+                            <Button Content="设置监控" Width="100" Height="25" Margin="3" Command="{Binding Path=MainViewModel.AddMonitorCommand, Source={StaticResource Locator}}" IsEnabled="{Binding Source={StaticResource Locator}, Path=MainViewModel.MonitorFlag}"></Button>
                             <Button Content="查看日志" Width="100" Height="25" Margin="3" Command="{Binding Path=MainViewModel.QueryLogsCommand, Source={StaticResource Locator}}"></Button>
                         </StackPanel>
-                        <DataGrid Grid.Row="1" ItemsSource="{Binding Path=MainViewModel.MonitorCollection, Source={StaticResource Locator}}">
+                        <DataGrid Grid.Row="1" ItemsSource="{Binding Path=MainViewModel.MonitorCollection, Source={StaticResource Locator}}" IsEnabled="{Binding Source={StaticResource Locator}, Path=MainViewModel.MonitorFlag}">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="监控文件夹" IsReadOnly="True" Binding="{Binding Path=MonitorDirectory}" Width="250"></DataGridTextColumn>
                                 <DataGridTextColumn Header="订阅者IP" IsReadOnly="True" Binding="{Binding Path=SubscribeIP}" Width="200"></DataGridTextColumn>
@@ -66,8 +66,8 @@
                                 <DataGridTextColumn Header="发送文件名" IsReadOnly="True" Binding="{Binding Path=TransferFileName}" Width="*"></DataGridTextColumn>
                             </DataGrid.Columns>
                         </DataGrid>
-                        <StackPanel Grid.Row="2" Background="Gray" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,3,5,3">
-                            <TextBlock Foreground="Red" FontSize="18" Text="{Binding Source={StaticResource Locator}, Path=MainViewModel.NotifyText}"></TextBlock>
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,3,5,3">
+                            <TextBlock Text="{Binding Source={StaticResource Locator}, Path=MainViewModel.NotifyText}"></TextBlock>
                         </StackPanel>
                         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="5,3,5,3">
                             <StackPanel Orientation="Horizontal" Margin="5,0,5,0">
@@ -76,11 +76,17 @@
                                          IsEnabled="{Binding Path=MainViewModel.CanSetListenPort, Source={StaticResource Locator}}" VerticalContentAlignment="Center"></TextBox>
                                 <Button Content="{Binding Path=MainViewModel.CanSetListenPort, Source={StaticResource Locator}, Converter={StaticResource SetPortConverter}}"
                                         Command="{Binding Path=MainViewModel.SetListenPortCommand, Source={StaticResource Locator}}" 
-                                        CommandParameter="{Binding Source={StaticResource Locator}, Path=MainViewModel.CanSetListenPort}" Width="100" Height="25" Margin="5,0,15,0"></Button>
+                                        CommandParameter="{Binding Source={StaticResource Locator}, Path=MainViewModel.CanSetListenPort}" Width="100" Height="25" Margin="5,0,5,0"></Button>
                             </StackPanel>
-                            <Button Content="{Binding Path=MainViewModel.MonitorFlag, Source={StaticResource Locator}, Converter={StaticResource MonitorFlagConverter}}"
+                            <StackPanel Orientation="Horizontal" Margin="5,0,5,0">
+                                <TextBlock Text="监控扫描周期:" VerticalAlignment="Center"></TextBlock>
+                                <TextBox Width="50" Height="25" Text="{Binding Source={StaticResource Locator}, Path=MainViewModel.ScanPeriod}"
+                                         IsEnabled="{Binding Source={StaticResource Locator}, Path=MainViewModel.MonitorFlag}" VerticalContentAlignment="Center" Margin="3,0,3,0"></TextBox>
+                                <TextBlock Text="秒" VerticalAlignment="Center"></TextBlock>
+                                <Button Content="{Binding Path=MainViewModel.MonitorFlag, Source={StaticResource Locator}, Converter={StaticResource MonitorFlagConverter}}"
                                     Command="{Binding Path=MainViewModel.ControlMonitorCommand, Source={StaticResource Locator}}"
-                                    CommandParameter="{Binding Path=MainViewModel.MonitorFlag, Source={StaticResource Locator}}" Width="100" Height="25"></Button>
+                                    CommandParameter="{Binding Path=MainViewModel.MonitorFlag, Source={StaticResource Locator}}" Width="100" Height="25" Margin="5,0,5,0"></Button>
+                            </StackPanel>
                         </StackPanel>
                     </Grid>
                 </Border>

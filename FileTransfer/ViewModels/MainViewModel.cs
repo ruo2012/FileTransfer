@@ -82,6 +82,19 @@ namespace FileTransfer.ViewModels
             }
         }
 
+        private int _scanPeriod;
+
+        public int ScanPeriod
+        {
+            get { return _scanPeriod; }
+            set
+            {
+                _scanPeriod = value;
+                RaisePropertyChanged("ScanPeriod");
+            }
+        }
+
+
         private string _notifyText;
 
         public string NotifyText
@@ -260,6 +273,7 @@ namespace FileTransfer.ViewModels
                 ConfigHelper.Instance.SubscribeSettings.ForEach(s => subscribeTemp.Add(s));
                 SubscribeCollection = new ObservableCollection<SubscribeModel>(subscribeTemp);
                 ListenPort = ConfigHelper.Instance.ListenPort;
+                ScanPeriod = ConfigHelper.Instance.ScanPeriod;
                 //订阅事件
                 FileWatcherHelper.Instance.NotifyMonitorIncrement = SynchronousSocketManager.Instance.SendMonitorChanges;
                 SynchronousSocketManager.Instance.SendFileProgress += ShowSendProgress;
@@ -312,7 +326,9 @@ namespace FileTransfer.ViewModels
 
         private void ExecuteClosedCommand()
         {
-            ConfigHelper.Instance.SaveSettings(MonitorCollection.ToList(), SubscribeCollection.ToList(), ListenPort);
+            var monitors = MonitorCollection.ToList();
+            var subscribes = SubscribeCollection.ToList();
+            ConfigHelper.Instance.SaveSettings(monitors, subscribes, ListenPort, ScanPeriod);
             SynchronousSocketManager.Instance.StopListening();
             _logger.Info("主窗体卸载完毕!");
         }

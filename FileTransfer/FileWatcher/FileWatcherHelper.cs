@@ -45,7 +45,7 @@ namespace FileTransfer.FileWatcher
             InitialMonitorChanges();
             //初始化定时器并启动
             _timer = new Timer();
-            _timer.Interval = 5000;
+            _timer.Interval = SimpleIoc.Default.GetInstance<MainViewModel>().ScanPeriod * 1000;
             _timer.Elapsed += _timer_Elapsed;
             _timer.Start();
             _logger.Info(string.Format("启动监控文件夹的扫描定时器，定时刷新时间间隔为{0}毫秒", _timer.Interval));
