@@ -27,6 +27,7 @@ namespace FileTransfer
     {
         #region 变量
         private SubscribeView _subscribeView;
+        private LogsQueryView _logsQueryView;
         #endregion
 
         public MainWindow()
@@ -58,6 +59,15 @@ namespace FileTransfer
                 case "CloseSubscribeView":
                     if (_subscribeView != null)
                         _subscribeView.Close();
+                    break;
+                case "ShowLogsQueryView":
+                    if (_logsQueryView == null || (new WindowInteropHelper(_logsQueryView)).Handle == IntPtr.Zero)
+                        _logsQueryView = new LogsQueryView(this);
+                    _logsQueryView.ShowDialog();
+                    break;
+                case "CloseLogsQueryView":
+                    if (_logsQueryView != null)
+                        _logsQueryView.Close();
                     break;
                 default:
                     break;

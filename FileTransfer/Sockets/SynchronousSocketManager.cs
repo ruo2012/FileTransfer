@@ -253,7 +253,7 @@ namespace FileTransfer.Sockets
                 //检查文件夹是否存在
                 acceptFiles.ForEach(f => { IOHelper.Instance.CheckAndCreateDirectory(f); });
                 //日志记录
-                acceptFiles.ForEach(file => { _logger.Info(string.Format("[File]{0}[FileReceiveState]{1}", file, @"开始接收")); });
+                acceptFiles.ForEach(file => { _logger.Info(string.Format("[File]{0}[MonitorIP]{1}[MonitorDirectory]{2}[FileReceiveState]{3}", file, monitorIp, monitorDirectory, @"开始接收")); });
                 //设置文件流
                 List<FileStream> fileStreams = acceptFiles.Select(f => new FileStream(f, FileMode.Create, FileAccess.Write)).ToList();
                 //接收文件
@@ -286,7 +286,7 @@ namespace FileTransfer.Sockets
                     AcceptFileProgress(monitorIp, monitorDirectory, fileName, 1.0);
                 }
                 //日志记录
-                acceptFiles.ForEach(file => { _logger.Info(string.Format("[File]{0}[FileReceiveState]{1}", file, @"完成接收")); });
+                acceptFiles.ForEach(file => { _logger.Info(string.Format("[File]{0}[MonitorIP]{1}[MonitorDirectory]{2}[FileReceiveState]{3}", file, monitorIp, monitorDirectory, @"完成接收")); });
                 //自加一
                 fileNumIndex++;
                 Thread.Sleep(50);
@@ -644,7 +644,7 @@ namespace FileTransfer.Sockets
                     sockets.ForEach(socket => socket.Send(sendBytes, 0, 4, SocketFlags.None));
                     sockets.ForEach(socket => socket.Send(fileNameBytes, 0, fileNameBytes.Length, SocketFlags.None));
                     //日志记录
-                    _logger.Info(string.Format("[File]{0}[FileSendState]{1}", file, @"开始发送"));
+                    subscribeIPs.ForEach(subIP => { _logger.Info(string.Format("[File]{0}[SubscribeIP]{1}[FileSendState]{2}", file, subIP, @"开始发送")); });
                     using (FileStream fs = new FileStream(file, FileMode.Open, FileAccess.Read))
                     {
                         long index = 0;
@@ -681,7 +681,7 @@ namespace FileTransfer.Sockets
                         }
                     }
                     //日志记录
-                    _logger.Info(string.Format("[File]{0}[FileSendState]{1}", file, @"发送完成"));
+                    subscribeIPs.ForEach(subIP => { _logger.Info(string.Format("[File]{0}[SubscribeIP]{1}[FileSendState]{2}", file, subIP, @"完成发送")); });
                     //发送完单个文件后，根据情况选择是否删除
                     Task.Factory.StartNew(() =>
                     {

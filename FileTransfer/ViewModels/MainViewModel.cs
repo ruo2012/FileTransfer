@@ -281,7 +281,7 @@ namespace FileTransfer.ViewModels
 
         private void ExecuteQueryLogsCommand()
         {
-
+            Messenger.Default.Send<string>("ShowLogsQueryView");
         }
 
         private void ExecuteLoadedCommand()
