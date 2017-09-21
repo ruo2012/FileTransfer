@@ -126,23 +126,43 @@ namespace FileTransfer.FileWatcher
             }
         }
 
-        //删除增量文件对应的子文件夹
+        //删除增量文件对应的子文件夹（需确保子文件内无文件，若有文件则先不删除子文件夹）
         public void TryDeleteSubdirectories(string monitorDirectory, List<string> incrementFiles)
         {
-            List<string> subdirectories = new List<string>();
-            List<string> dirs = incrementFiles.Select(f => (new FileInfo(f)).DirectoryName).ToList();
-            foreach (var d in dirs)
+            //遍历monitorDirectory下的各层级的子文件夹，子文件夹内若无文件及子文件夹，则删除子文件夹；若有
+            var subDirInfos = (new DirectoryInfo(monitorDirectory)).GetDirectories();
+            if (subDirInfos.Length == 0) return;
+            foreach (var subDir in subDirInfos)
             {
-                var temp = d.Replace(monitorDirectory, "");
-                if (string.IsNullOrEmpty(temp)) continue;
-                string[] strs = temp.Split('\\');
-                if (strs.Length < 2) continue;
-                temp = Path.Combine(monitorDirectory, strs[1]);
-                subdirectories.Add(temp);
+                if (GetAllFiles(subDir.FullName).Count == 0)
+                {
+                    DeleteDirectory(subDir.FullName);
+                    continue;
+                }
+                TryDeleteSubdirectories(subDir.FullName, null);
             }
-            if (subdirectories.Count <= 0) return;
-            subdirectories = subdirectories.Distinct().ToList();
-            DeleteDirectories(subdirectories);
+
+            //List<string> directoryNames = incrementFiles.Select(f => (new FileInfo(f)).DirectoryName).Distinct().ToList();
+            //foreach (var dirInfo in directoryInfos)
+            //{
+            //    if (dirInfo.GetFiles().Length > 0)
+            //        continue;
+            //    DeleteDirectory(dirInfo.FullName);
+            //    DirectoryInfo temp = dirInfo.Parent;
+            //    while (temp.FullName != monitorDirectory)
+            //    {
+            //        if (temp.GetFiles().Length > 0) break;
+
+            //        temp = temp.Parent;
+            //    }
+            //}
+
+            ////遍历检查每个子文件夹内是否有文件，若无则删除
+            //foreach (var dir in subdirectories)
+            //{
+            //    GetAllFiles(dir);
+            //}
+            //DeleteDirectories(subdirectories);
         }
 
         public void CheckAndCreateDirectory(string fileName)

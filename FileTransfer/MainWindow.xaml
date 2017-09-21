@@ -5,7 +5,7 @@
         xmlns:converter="clr-namespace:FileTransfer.Converters"
         xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
         xmlns:rule="clr-namespace:FileTransfer.ValidationRules"
-        Title="文件监控传输" Height="560" Width="1000" Loaded="Window_Loaded" Closed="Window_Closed">
+        Title="文件监控传输" Height="560" Width="1000" Loaded="Window_Loaded" Closed="Window_Closed" Closing="Window_Closing">
     <Window.Resources>
         <vm:ViewModelLocator x:Key="Locator"></vm:ViewModelLocator>
         <converter:MonitorFlagConverter x:Key="MonitorFlagConverter"></converter:MonitorFlagConverter>

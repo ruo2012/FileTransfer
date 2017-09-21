@@ -276,7 +276,7 @@ namespace FileTransfer.Sockets
                     byteRec = socket.Receive(buffer, 0, tempSize, SocketFlags.None);
                     fileStreams.ForEach(fs => { fs.Write(buffer.Take(byteRec).ToArray(), 0, byteRec); });
                     index += byteRec;
-                    Thread.Sleep(5);
+                    Thread.Sleep(1);
                 }
                 //关闭文件流
                 fileStreams.ForEach(fs => { fs.Close(); });
@@ -289,7 +289,7 @@ namespace FileTransfer.Sockets
                 acceptFiles.ForEach(file => { _logger.Info(string.Format("[File]{0}[MonitorIP]{1}[MonitorDirectory]{2}[FileReceiveState]{3}", file, monitorIp, monitorDirectory, @"完成接收")); });
                 //自加一
                 fileNumIndex++;
-                Thread.Sleep(50);
+                Thread.Sleep(10);
             }
             //发出所有文件接收完毕事件
             if (CompleteAcceptFile != null)
@@ -672,7 +672,7 @@ namespace FileTransfer.Sockets
                             fs.Read(buffer, 0, tempSize);
                             sockets.ForEach(socket => socket.Send(buffer, 0, tempSize, SocketFlags.None));
                             index += tempSize;
-                            Thread.Sleep(5);
+                            Thread.Sleep(1);
                         }
                         //发送进度事件
                         if (SendFileProgress != null)
@@ -687,7 +687,7 @@ namespace FileTransfer.Sockets
                     {
                         IOHelper.Instance.TryDeleteFile(monitorDirectory, file);
                     });
-                    Thread.Sleep(50);
+                    Thread.Sleep(10);
                 });
                 //所有文件发送完成后，根据情况选择是否删除子目录
                 Task.Factory.StartNew(() =>

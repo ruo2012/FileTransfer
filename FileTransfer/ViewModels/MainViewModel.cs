@@ -150,9 +150,6 @@ namespace FileTransfer.ViewModels
             SetListenPortCommand = new RelayCommand<bool>(ExecuteSetListenPortCommand);
         }
 
-
-
-
         private void ExecuteControlMonitorCommand(bool control)
         {
             if (control)
@@ -259,6 +256,7 @@ namespace FileTransfer.ViewModels
                 }
                 //删除监控配置
                 MonitorCollection.Remove(model1);
+                if (string.IsNullOrEmpty(model1.SubscribeIP)) return;
                 //删除监控配置后通知相关订阅方，删除相关配置
                 SynchronousSocketManager.Instance.SendDeleteMonitorInfo(UtilHelper.Instance.GetIPEndPoint(model1.SubscribeIP), model1.MonitorDirectory);
             }
@@ -281,6 +279,11 @@ namespace FileTransfer.ViewModels
 
         private void ExecuteQueryLogsCommand()
         {
+            if (SynchronousSocketManager.Instance.SendingFilesFlag || SynchronousSocketManager.Instance.ReceivingFlag)
+            {
+                MessageBox.Show("当前程序正在接发数据！", "提醒", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
             Messenger.Default.Send<string>("ShowLogsQueryView");
         }
 

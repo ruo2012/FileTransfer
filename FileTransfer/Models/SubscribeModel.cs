@@ -24,7 +24,7 @@ namespace FileTransfer.Models
         }
 
         private int _monitorListenPort;
-        [XmlIgnore]
+        [XmlAttribute("MonitorListenPort")]
         public int MonitorListenPort
         {
             get { return _monitorListenPort; }
