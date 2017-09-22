@@ -692,7 +692,7 @@ namespace FileTransfer.Sockets
                 //所有文件发送完成后，根据情况选择是否删除子目录
                 Task.Factory.StartNew(() =>
                 {
-                    IOHelper.Instance.TryDeleteSubdirectories(monitorDirectory, monitorIncrement);
+                    IOHelper.Instance.TryDeleteSubdirectories(monitorDirectory);
                 });
                 //发出所有文件发送完毕的事件
                 if (CompleteSendFile != null)

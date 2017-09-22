@@ -273,7 +273,8 @@ namespace FileTransfer.ViewModels
                 //删除接收配置
                 SubscribeCollection.Remove(model2);
                 //删除接收配置后，综合接收配置决定是否通知监控端删除订阅信息
-                SynchronousSocketManager.Instance.SendUnregisterSubscribeInfo(UtilHelper.Instance.GetIPEndPoint(string.Format("{0}:{1}", model2.MonitorIP, model2.MonitorListenPort)), model2.MonitorDirectory);
+                if (SubscribeCollection.FirstOrDefault(s => s.MonitorIP == model2.MonitorIP) == null)
+                    SynchronousSocketManager.Instance.SendUnregisterSubscribeInfo(UtilHelper.Instance.GetIPEndPoint(string.Format("{0}:{1}", model2.MonitorIP, model2.MonitorListenPort)), model2.MonitorDirectory);
             }
         }
 
@@ -394,12 +395,11 @@ namespace FileTransfer.ViewModels
         #region 公共方法
         public void CompleteMonitorSetting(string subscribeIP, string monitorDirectory)
         {
+            if (MonitorCollection.Any(m => m.MonitorDirectory == monitorDirectory && m.SubscribeIP == subscribeIP)) return;
             var monitor = MonitorCollection.FirstOrDefault(m => m.MonitorDirectory == monitorDirectory);
             if (monitor == null) return;
             if (string.IsNullOrEmpty(monitor.SubscribeIP))
                 monitor.SubscribeIP = subscribeIP;
-            else if (monitor.SubscribeIP == subscribeIP)
-                return;
             else
             {
                 App.Current.Dispatcher.BeginInvoke(new Action(() =>

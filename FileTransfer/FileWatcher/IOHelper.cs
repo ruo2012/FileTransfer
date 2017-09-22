@@ -127,8 +127,9 @@ namespace FileTransfer.FileWatcher
         }
 
         //删除增量文件对应的子文件夹（需确保子文件内无文件，若有文件则先不删除子文件夹）
-        public void TryDeleteSubdirectories(string monitorDirectory, List<string> incrementFiles)
+        public void TryDeleteSubdirectories(string monitorDirectory)
         {
+            if (!_deleteSubdirectoryDic.Keys.Contains(monitorDirectory) || _deleteSubdirectoryDic[monitorDirectory] == false) return;
             //遍历monitorDirectory下的各层级的子文件夹，子文件夹内若无文件及子文件夹，则删除子文件夹；若有
             var subDirInfos = (new DirectoryInfo(monitorDirectory)).GetDirectories();
             if (subDirInfos.Length == 0) return;
@@ -139,7 +140,7 @@ namespace FileTransfer.FileWatcher
                     DeleteDirectory(subDir.FullName);
                     continue;
                 }
-                TryDeleteSubdirectories(subDir.FullName, null);
+                TryDeleteSubdirectories(subDir.FullName);
             }
 
             //List<string> directoryNames = incrementFiles.Select(f => (new FileInfo(f)).DirectoryName).Distinct().ToList();
