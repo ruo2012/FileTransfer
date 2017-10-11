@@ -378,7 +378,7 @@ namespace FileTransfer.Sockets
                 if (socket == null)
                 {
                     _logger.Error(string.Format("与远端{0}:{1}尝试{2}次（最大连接次数）连接后失败！", remote.Address, remote.Port, CONNECTED_MAXCOUNT));
-                    MessageBox.Show("无法与远端进行连接！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(string.Format("无法与远端{0}:{1}进行连接！", remote.Address, remote.Port), "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return null;
                 }
                 //设置Timeout
@@ -514,7 +514,7 @@ namespace FileTransfer.Sockets
                 if (socket == null)
                 {
                     _logger.Error(string.Format("与远端{0}:{1}尝试{2}次（最大连接次数）连接后失败！", remote.Address, remote.Port, CONNECTED_MAXCOUNT));
-                    MessageBox.Show("无法与远端进行连接！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(string.Format("无法与远端{0}:{1}进行连接！", remote.Address, remote.Port), "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
                 //设置Timeout
@@ -597,7 +597,7 @@ namespace FileTransfer.Sockets
                     if (socket == null)
                     {
                         _logger.Error(string.Format("发送监控文件夹{0}内文件时与远端{1}:{2}尝试{3}次（最大连接次数）连接后失败！", monitorDirectory, ep.Address, ep.Port, CONNECTED_MAXCOUNT));
-                        MessageBox.Show("传送文件时无法与远端进行连接！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show(string.Format("传送文件时无法与远端{0}发起连接！", ep.Address), "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
                     //设置Timeout
@@ -739,7 +739,7 @@ namespace FileTransfer.Sockets
                 if (socket == null)
                 {
                     _logger.Error(string.Format("与远端{0}:{1}尝试{2}次（最大连接次数）连接后失败！", remote.Address, remote.Port, CONNECTED_MAXCOUNT));
-                    MessageBox.Show("无法与远端进行连接！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(string.Format("无法与远端{0}:{1}进行连接！", remote.Address, remote.Port), "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 //设置Timeout
                 socket.SendTimeout = SOCKET_SEND_TIMEOUT;
@@ -791,7 +791,7 @@ namespace FileTransfer.Sockets
                 if (socket == null)
                 {
                     _logger.Error(string.Format("与远端{0}:{1}尝试{2}次（最大连接次数）连接后失败！", remote.Address, remote.Port, CONNECTED_MAXCOUNT));
-                    MessageBox.Show("无法与远端进行连接！", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(string.Format("无法与远端{0}:{1}进行连接！", remote.Address, remote.Port), "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 //设置Timeout
                 socket.SendTimeout = SOCKET_SEND_TIMEOUT;

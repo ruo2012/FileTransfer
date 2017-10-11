@@ -27,6 +27,7 @@
             <Setter Property="AutoGenerateColumns" Value="False"></Setter>
             <Setter Property="Margin" Value="5"></Setter>
             <Setter Property="RowHeaderWidth" Value="0"></Setter>
+            <Setter Property="SelectionMode" Value="Single"></Setter>
         </Style>
     </Window.Resources>
     <i:Interaction.Triggers>
@@ -72,22 +73,7 @@
                         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,3,5,3">
                             <TextBlock Text="{Binding Source={StaticResource Locator}, Path=MainViewModel.NotifyText}"></TextBlock>
                         </StackPanel>
-                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="5,3,5,3">
-                            <StackPanel Orientation="Horizontal" Margin="5,0,5,0">
-                                <TextBlock Text="监听端口：" VerticalAlignment="Center"></TextBlock>
-                                <TextBox Width="100" Height="25" IsEnabled="{Binding Path=MainViewModel.CanSetListenPort, Source={StaticResource Locator}}" InputMethod.IsInputMethodEnabled="False" VerticalContentAlignment="Center">
-                                    <TextBox.Text>
-                                        <Binding Path="MainViewModel.ListenPort" Source="{StaticResource Locator}" UpdateSourceTrigger="PropertyChanged">
-                                            <Binding.ValidationRules>
-                                                <rule:PosIntCheckRule/>
-                                            </Binding.ValidationRules>
-                                        </Binding>
-                                    </TextBox.Text>
-                                </TextBox>
-                                <Button Content="{Binding Path=MainViewModel.CanSetListenPort, Source={StaticResource Locator}, Converter={StaticResource SetPortConverter}}"
-                                        Command="{Binding Path=MainViewModel.SetListenPortCommand, Source={StaticResource Locator}}" 
-                                        CommandParameter="{Binding Source={StaticResource Locator}, Path=MainViewModel.CanSetListenPort}" Width="100" Height="25" Margin="5,0,5,0"></Button>
-                            </StackPanel>
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="5,3,5,3"> 
                             <StackPanel Orientation="Horizontal" Margin="5,0,5,0">
                                 <TextBlock Text="监控扫描周期:" VerticalAlignment="Center"></TextBlock>
                                 <TextBox Width="50" Height="25" Text="{Binding Source={StaticResource Locator}, Path=MainViewModel.ScanPeriod}" InputMethod.IsInputMethodEnabled="False"
@@ -107,6 +93,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"></RowDefinition>
                             <RowDefinition Height="1*"></RowDefinition>
+                            <RowDefinition Height="Auto"></RowDefinition>
                         </Grid.RowDefinitions>
                         <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5,3,5,3">
                             <Button Content="设置接收" Width="100" Height="25" Margin="3" Command="{Binding Path=MainViewModel.AddSubscibeCommand, Source={StaticResource Locator}}"></Button>
@@ -129,6 +116,23 @@
                                 <DataGridTextColumn Header="接收文件名" IsReadOnly="True" Binding="{Binding Path=AcceptFileName}" Width="*"></DataGridTextColumn>
                             </DataGrid.Columns>
                         </DataGrid>
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="5,3,5,3">
+                            <StackPanel Orientation="Horizontal" Margin="5,0,5,0">
+                                <TextBlock Text="接收端口：" VerticalAlignment="Center"></TextBlock>
+                                <TextBox Width="100" Height="25" IsEnabled="{Binding Path=MainViewModel.CanSetListenPort, Source={StaticResource Locator}}" InputMethod.IsInputMethodEnabled="False" VerticalContentAlignment="Center">
+                                    <TextBox.Text>
+                                        <Binding Path="MainViewModel.ListenPort" Source="{StaticResource Locator}" UpdateSourceTrigger="PropertyChanged">
+                                            <Binding.ValidationRules>
+                                                <rule:PosIntCheckRule/>
+                                            </Binding.ValidationRules>
+                                        </Binding>
+                                    </TextBox.Text>
+                                </TextBox>
+                                <Button Content="{Binding Path=MainViewModel.CanSetListenPort, Source={StaticResource Locator}, Converter={StaticResource SetPortConverter}}"
+                                        Command="{Binding Path=MainViewModel.SetListenPortCommand, Source={StaticResource Locator}}" 
+                                        CommandParameter="{Binding Source={StaticResource Locator}, Path=MainViewModel.CanSetListenPort}" Width="100" Height="25" Margin="5,0,5,0"></Button>
+                            </StackPanel>
+                        </StackPanel>
                     </Grid>
                 </Border>
             </TabItem>
